@@ -1,5 +1,8 @@
 # tg-price-calc — Telegram Mini App «Калькулятор стоимости клининга + заявка»
 
+**🔗 Живое демо:** https://tg-price-calc.vercel.app — открывается в обычном браузере
+и как Telegram Mini App.
+
 Демо-кейс для портфолио. Клиент задаёт параметры уборки → видит вилку цены вживую →
 оставляет заявку → владельцу приходит уведомление в Telegram с готовым расчётом.
 
@@ -68,7 +71,7 @@ Windows PowerShell: если `npm.ps1` блокируется политикой
 3. Скопируйте `.env.example` → `.env.local` и заполните:
    ```
    TELEGRAM_BOT_TOKEN=123456:ABC...
-   TELEGRAM_CHAT_ID=782598557
+   TELEGRAM_CHAT_ID=123456789
    ```
 4. Перезапустите `npm run dev`. Теперь заявки приходят в Telegram.
 
@@ -149,4 +152,11 @@ curl "https://api.telegram.org/bot<TOKEN>/setWebhook" \
 - Запись заявок в Google Sheets через `GOOGLE_APPS_SCRIPT_WEBHOOK_URL` (апсейл).
 - Антиспам/rate-limit на `/api/lead`.
 - Межсессионный дедуп повторных заявок (требует хранилища).
-- Реальные скриншоты в `public/screenshots/` + демо-ссылка в шапке README.
+
+## Безопасность
+Секреты (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`)
+хранятся только в `.env.local` (в `.gitignore`) и в переменных окружения Vercel —
+в репозитории их нет. `.env.example` содержит лишь пустые ключи.
+
+## Лицензия
+[MIT](LICENSE)
