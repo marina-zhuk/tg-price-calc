@@ -72,46 +72,76 @@ Windows PowerShell: если `npm.ps1` блокируется политикой
    задеплоенного приложения (см. ниже).
 2. Откройте бота → кнопка меню/`web_app` запустит Mini App внутри Telegram.
 
-## Деплой на Vercel
+## Деплой на Vercel (авто-деплой из GitHub)
 1. Залейте репозиторий на GitHub.
-2. На [vercel.com](https://vercel.com) → **New Project** → импортируйте репозиторий.
+2. На [vercel.com](https://vercel.com) → **New Project** → импортируйте репозиторий
+   (или свяжите существующий проект: `vercel git connect <repo-url>`).
 3. Framework определится как Next.js автоматически. **Environment Variables**:
-   добавьте `TELEGRAM_BOT_TOKEN` и `TELEGRAM_CHAT_ID` (если нужны реальные уведомления).
-4. **Deploy**. Получите прод-URL — его и указывайте в @BotFather как Web App URL.
+   `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`,
+   `NEXT_PUBLIC_APP_URL` (для реальных уведомлений и webhook).
+4. **Deploy**. Дальше каждый `git push` в `main` → автоматический прод-деплой;
+   пуши в другие ветки → preview-деплои.
+5. Прод-URL укажите в @BotFather как Web App URL и в `setWebhook`.
 
 ## Структура
 ```
 src/
   app/
-    layout.tsx            # подключение telegram-web-app.js, мета
-    page.tsx              # экран: калькулятор + форма заявки
+    layout.tsx                   # telegram-web-app.js, мета/OG
+    page.tsx                     # экран: калькулятор + форма; BackButton
     globals.css
-    api/lead/route.ts     # POST /api/lead: Zod + отправка/мок
+    api/lead/route.ts            # POST /api/lead: Zod + серверный пересчёт + отправка/мок
+    api/telegram/webhook/route.ts# Telegram webhook: статусы заявок + /start
   components/
-    Calculator.tsx        # UI калькулятора, живой расчёт
-    LeadForm.tsx          # форма заявки + интеграция MainButton
+    Calculator.tsx               # UI калькулятора, живой расчёт
+    LeadForm.tsx                 # форма: маска телефона, success-экран, MainButton
   lib/
-    pricing.ts            # чистая функция расчёта
-    schema.ts             # Zod-схема заявки
-    telegram.ts           # сборка сообщения + sendMessage / mock
-    useTelegram.ts        # хук инициализации WebApp + тема
-    telegram-webapp.d.ts  # типы SDK
+    pricing.ts                   # чистая функция расчёта
+    pricing.test.ts              # юнит-тесты (vitest)
+    schema.ts                    # Zod-схема (строгие enum по конфигу)
+    telegram.ts                  # сборка сообщения + sendMessage + кнопки статуса
+    telegram-initdata.ts         # HMAC-проверка подписи Telegram initData
+    useTelegram.ts               # хук инициализации WebApp + тема
+    telegram-webapp.d.ts         # типы SDK
   config/
-    pricing.config.ts     # ПРАЙС НИШИ (точка смены ниши)
+    pricing.config.ts            # ПРАЙС НИШИ + контакты (точка смены ниши)
 public/
-  screenshots/            # скриншоты для портфолио
+  screenshots/                   # скриншоты для портфолио
 ```
 
+## Кто что видит: клиент vs владелец
+- **Клиент** (любой пользователь бота) видит ОДИН и тот же интерфейс: калькулятор
+  + форму заявки. Чужих/своих заявок он не видит — это просто веб-страница.
+- **Владелец** (chat_id из env) получает заявки в личку с расчётом и кнопками
+  статуса «🟡 В работе / ✅ Обработано». Статус хранится прямо в сообщении.
+- **Превью «как у клиента»:** просто откройте `NEXT_PUBLIC_APP_URL` в браузере или
+  запустите Mini App из другого Telegram-аккаунта — вид идентичен.
+
+## Отслеживание заявок у владельца (webhook)
+Под каждой заявкой — inline-кнопки статуса. Чтобы они работали, бот должен
+получать апдейты на `/api/telegram/webhook`:
+```bash
+# 1) задайте секрет в env (Vercel + .env.local): TELEGRAM_WEBHOOK_SECRET=...
+# 2) зарегистрируйте webhook (один раз):
+curl "https://api.telegram.org/bot<TOKEN>/setWebhook" \
+  -d "url=https://<домен>/api/telegram/webhook" \
+  -d "secret_token=<TELEGRAM_WEBHOOK_SECRET>"
+```
+`/start` боту отвечает приветствием и кнопкой запуска Mini App (онбординг).
+
 ## Допущения (демо)
-- Без токенов приложение работает в **mock-режиме** — это штатное поведение демо.
-- `initData` Telegram передаётся на бэк, но **не проверяется** (для демо подпись не валидируется).
-- Нет БД: заявки не хранятся, только отправляются/логируются.
-- Телефон валидируется мягко (длина + допустимые символы), без проверки формата по стране.
+- Без токенов приложение работает в **mock-режиме** — штатное поведение демо.
+- Цена пересчитывается на сервере по конфигу; клиентским `min/max` не доверяем.
+- Подпись `initData` проверяется (HMAC по токену бота); при отсутствии токена —
+  пропускается (mock).
+- Нет БД: заявки не хранятся. Повторная (исправленная) заявка определяется в
+  пределах одной сессии (счётчик отправок), межсессионный дедуп — апсейл.
+- Статусы заявок живут в тексте/кнопках Telegram-сообщения (без БД).
 - Вилка цены (`×1.2`) — демонстрационная «вверх», точную смету подтверждает менеджер.
+- Контакт менеджера в `pricing.config.ts` — плейсхолдер, заменить на реальный.
 
 ## TODO после goal
-- Проверка подписи `initData` (HMAC по токену бота) на бэке.
-- Запись заявок в Google Sheets через `GOOGLE_APPS_SCRIPT_WEBHOOK_URL` (опциональный апсейл).
+- Запись заявок в Google Sheets через `GOOGLE_APPS_SCRIPT_WEBHOOK_URL` (апсейл).
 - Антиспам/rate-limit на `/api/lead`.
+- Межсессионный дедуп повторных заявок (требует хранилища).
 - Реальные скриншоты в `public/screenshots/` + демо-ссылка в шапке README.
-- Тесты на `calculatePrice` (граничные случаи: минимальный заказ, срочность, опции).
