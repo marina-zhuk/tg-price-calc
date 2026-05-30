@@ -23,11 +23,19 @@ export function useTelegram(): UseTelegramResult {
     const tg = typeof window !== "undefined" ? window.Telegram?.WebApp : undefined;
     if (!tg) return;
 
-    tg.ready();
-    tg.expand();
+    // telegram-web-app.js создаёт WebApp-заглушку и в обычном браузере.
+    // Реальный Telegram отличаем по непустому initData или известной платформе
+    // (вне Telegram platform === "unknown"). Иначе — обычный браузерный режим.
+    const inTelegram =
+      (typeof tg.initData === "string" && tg.initData.length > 0) ||
+      (typeof tg.platform === "string" && tg.platform !== "unknown");
 
+    tg.ready();
     applyTheme(tg);
 
+    if (!inTelegram) return; // обычный браузер: рендерим обычную кнопку отправки
+
+    tg.expand();
     setWebApp(tg);
     setIsTelegram(true);
   }, []);

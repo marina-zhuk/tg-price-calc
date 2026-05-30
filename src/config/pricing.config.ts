@@ -77,8 +77,7 @@ export const pricingConfig: PricingConfig = {
     { id: "ironing", label: "Глажка белья", price: 700 },
   ],
   contact: {
-    // TODO: заменить на реальный username менеджера/компании.
-    managerTelegram: "MiniAppCalculator_bot",
+    managerTelegram: "prssfff",
     callbackPromise: "Перезвоним в течение ~15 минут в рабочее время.",
   },
 };

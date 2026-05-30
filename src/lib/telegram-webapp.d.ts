@@ -38,6 +38,8 @@ export interface TelegramBackButton {
 
 export interface TelegramWebApp {
   initData: string;
+  /** "unknown" вне Telegram; реальная платформа (android/ios/tdesktop/...) внутри. */
+  platform?: string;
   colorScheme: "light" | "dark";
   themeParams: TelegramThemeParams;
   isExpanded: boolean;

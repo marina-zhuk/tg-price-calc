@@ -6,6 +6,11 @@
 Архитектура не привязана к нише: смена ниши = правка `src/config/pricing.config.ts`
 и текстов. Код калькулятора и отправки заявки не меняется.
 
+## Скриншоты
+| Калькулятор (живой расчёт) | Форма заявки | Заявка принята |
+|:--:|:--:|:--:|
+| ![Калькулятор](public/screenshots/01-calculator.png) | ![Форма заявки](public/screenshots/02-form.png) | ![Экран успеха](public/screenshots/03-success.png) |
+
 ## Стек
 - Next.js 14 (App Router) + TypeScript
 - Tailwind CSS
