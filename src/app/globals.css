@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Дефолты темы (вне Telegram). Переопределяются themeParams в useTelegram. */
+  --tg-bg: #ffffff;
+  --tg-text: #111827;
+  --tg-hint: #6b7280;
+  --tg-link: #2563eb;
+  --tg-button: #2563eb;
+  --tg-button-text: #ffffff;
+  --tg-secondary-bg: #f3f4f6;
+}
+
+html,
+body {
+  background-color: var(--tg-bg);
+  color: var(--tg-text);
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
