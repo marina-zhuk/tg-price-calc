@@ -4,11 +4,22 @@ import { sendLeadToTelegram } from "@/lib/telegram";
 import { calculatePrice } from "@/lib/pricing";
 import { pricingConfig } from "@/config/pricing.config";
 import { verifyInitData } from "@/lib/telegram-initdata";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { persistLead } from "@/lib/lead-sink";
 import type { CleaningTypeId, UrgencyId } from "@/config/pricing.config";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  // Анти-спам: ограничиваем число заявок с одного IP.
+  const limit = rateLimit(`lead:${clientIp(req)}`);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { ok: false, error: "Слишком много заявок. Попробуйте позже." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
+    );
+  }
+
   let json: unknown;
   try {
     json = await req.json();
@@ -37,7 +48,7 @@ export async function POST(req: Request) {
     options: lead.calc.options,
   });
 
-  // Подлинность Telegram-данных (если пришли из Mini App).
+  // Подлинность Telegram-данных (если пришли из Mini App): подпись + свежесть.
   const initCheck = verifyInitData(lead.initData, process.env.TELEGRAM_BOT_TOKEN);
 
   // Валидный ввод: в демо НИКОГДА не падаем.
@@ -49,12 +60,21 @@ export async function POST(req: Request) {
     user: initCheck.user,
   });
 
+  // Точка расширения под хранилище (Google Sheets и т.п.). No-op, если не настроено.
+  await persistLead({
+    lead,
+    price: { min: priced.min, max: priced.max },
+    signatureVerified: initCheck.valid,
+    receivedAt: new Date().toISOString(),
+  });
+
   return NextResponse.json({
     ok: true,
     mock: result.mock,
     delivered: result.ok,
     price: { min: priced.min, max: priced.max },
     signatureVerified: initCheck.valid,
+    ...(initCheck.expired ? { signatureExpired: true } : {}),
     ...(result.error ? { deliveryError: result.error } : {}),
   });
 }

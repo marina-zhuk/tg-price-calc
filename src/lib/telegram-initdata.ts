@@ -24,11 +24,17 @@ export interface InitDataResult {
   user?: TelegramUser;
   /** true, если initData отсутствует (обычный браузер / демо без Telegram). */
   absent: boolean;
+  /** true, если подпись верна, но данные устарели (защита от повторного использования). */
+  expired?: boolean;
 }
+
+/** initData старше этого возраста считается просроченным (анти-replay). */
+const DEFAULT_MAX_AGE_SECONDS = 24 * 60 * 60;
 
 export function verifyInitData(
   initData: string | undefined,
-  botToken: string | undefined
+  botToken: string | undefined,
+  maxAgeSeconds: number = DEFAULT_MAX_AGE_SECONDS
 ): InitDataResult {
   if (!initData) return { valid: false, absent: true };
   if (!botToken) {
@@ -57,11 +63,26 @@ export function verifyInitData(
       .update(dataCheckString)
       .digest("hex");
 
-    const valid =
+    const signatureOk =
       expected.length === hash.length &&
       crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(hash));
 
-    return { valid, absent: false, user: parseUser(initData) };
+    if (!signatureOk) {
+      return { valid: false, absent: false, user: parseUser(initData) };
+    }
+
+    // Свежесть: auth_date (unix-секунды) не старше maxAgeSeconds.
+    const authDate = Number(params.get("auth_date"));
+    const ageOk =
+      Number.isFinite(authDate) &&
+      Date.now() / 1000 - authDate <= maxAgeSeconds;
+
+    return {
+      valid: ageOk,
+      expired: !ageOk,
+      absent: false,
+      user: parseUser(initData),
+    };
   } catch {
     return { valid: false, absent: false };
   }
