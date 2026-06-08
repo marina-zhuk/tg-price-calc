@@ -1,15 +1,14 @@
 /**
  * Точка расширения для ХРАНЕНИЯ заявок (намеренно не реализовано сейчас).
  *
- * Где лучше всего сделать: Google Apps Script Web App → Google Sheets.
- * Это самый дешёвый и быстрый способ без БД и серверов:
- *   1. В Google Sheets: Расширения → Apps Script → опубликовать как Web App
- *      (doPost, который пишет строку в таблицу), получить URL.
- *   2. Добавить env GOOGLE_APPS_SCRIPT_WEBHOOK_URL.
- *   3. В функции ниже сделать fetch(url, { method: "POST", body: JSON ... }).
+ * Как подключаем Google Sheets:
+ *   1. В таблице: Расширения → Apps Script — пишем небольшой скрипт (doPost),
+ *      который дописывает строку с заявкой.
+ *   2. Публикуем скрипт как веб-приложение → Google выдаёт URL.
+ *   3. Кладём этот URL в env GOOGLE_SHEETS_URL — и функция ниже шлёт на него
+ *      данные каждой заявки. Кода в проекте больше менять не нужно.
  *
- * Альтернативы: Vercel KV / Upstash Redis (быстрый ключ-значение),
- * Postgres/Supabase (если нужны выборки и статусы в БД).
+ * Альтернативы, если понадобится: Vercel KV / Upstash Redis или Postgres/Supabase.
  *
  * Вызывается из /api/lead ПОСЛЕ серверного пересчёта цены. Не должно ронять
  * ответ клиенту: любые ошибки логируем и проглатываем.
@@ -25,7 +24,7 @@ export interface LeadRecord {
 }
 
 export async function persistLead(record: LeadRecord): Promise<void> {
-  const url = process.env.GOOGLE_APPS_SCRIPT_WEBHOOK_URL;
+  const url = process.env.GOOGLE_SHEETS_URL;
   if (!url) {
     // Хранилище не подключено — штатно ничего не делаем (заявка ушла в Telegram).
     return;
