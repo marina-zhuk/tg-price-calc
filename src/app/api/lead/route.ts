@@ -5,7 +5,6 @@ import { calculatePrice } from "@/lib/pricing";
 import { pricingConfig } from "@/config/pricing.config";
 import { verifyInitData } from "@/lib/telegram-initdata";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
-import { persistLead } from "@/lib/lead-sink";
 import type { CleaningTypeId, UrgencyId } from "@/config/pricing.config";
 
 export const runtime = "nodejs";
@@ -58,14 +57,6 @@ export async function POST(req: Request) {
     isRepeat: (lead.submissionCount ?? 1) > 1,
     signatureVerified: initCheck.valid,
     user: initCheck.user,
-  });
-
-  // Точка расширения под хранилище (Google Sheets и т.п.). No-op, если не настроено.
-  await persistLead({
-    lead,
-    price: { min: priced.min, max: priced.max },
-    signatureVerified: initCheck.valid,
-    receivedAt: new Date().toISOString(),
   });
 
   return NextResponse.json({
