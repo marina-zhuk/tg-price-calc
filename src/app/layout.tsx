@@ -3,20 +3,21 @@ import Script from "next/script";
 import "./globals.css";
 
 const description =
-  "Telegram Mini App: рассчитайте стоимость уборки и оставьте заявку за минуту.";
+  "Витринный Telegram Mini App калькулятор: клиент считает стоимость услуги и оставляет заявку, а владелец получает её в Telegram.";
 
 export const metadata: Metadata = {
-  title: "Калькулятор стоимости клининга",
+  metadataBase: new URL("https://tg-price-calc.vercel.app"),
+  title: "Telegram Mini App калькулятор стоимости",
   description,
   openGraph: {
-    title: "Калькулятор стоимости клининга",
+    title: "Telegram Mini App калькулятор стоимости",
     description,
     type: "website",
     locale: "ru_RU",
   },
   twitter: {
     card: "summary",
-    title: "Калькулятор стоимости клининга",
+    title: "Telegram Mini App калькулятор стоимости",
     description,
   },
 };

@@ -1,12 +1,14 @@
 {
   "name": "tg-price-calc",
   "version": "0.1.0",
+  "description": "Portfolio demo Telegram Mini App calculator for service businesses: price estimate, lead form and Telegram notifications.",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {

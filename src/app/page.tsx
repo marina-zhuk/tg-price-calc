@@ -52,7 +52,7 @@ export default function Home() {
       <header className="mb-6">
         <h1 className="text-xl font-bold">Калькулятор стоимости клининга</h1>
         <p className="mt-1 text-sm text-tg-hint">
-          Задайте параметры — узнайте цену сразу и оставьте заявку.
+          Demo Mini App: клиент считает цену и оставляет заявку в Telegram.
         </p>
       </header>
 
@@ -97,7 +97,7 @@ export default function Home() {
       )}
 
       <footer className="mt-10 text-center text-xs text-tg-hint">
-        Демо-кейс · Telegram Mini App
+        Витринный demo-кейс · адаптируется под разные услуги
       </footer>
     </main>
   );
