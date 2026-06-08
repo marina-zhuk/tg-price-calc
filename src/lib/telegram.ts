@@ -61,6 +61,8 @@ export function buildLeadMessage(lead: LeadInput, meta: LeadMessageMeta): string
     `👤 <b>Имя:</b> ${escapeHtml(name)}`,
     `📞 <b>Телефон:</b> ${escapeHtml(phone)}`,
     `💬 <b>Комментарий:</b> ${comment ? escapeHtml(comment) : "—"}`,
+    `📍 <b>Адрес:</b> ${escapeHtml(lead.address)}`,
+    `🗓 <b>Дата/время:</b> ${lead.datetime ? escapeHtml(lead.datetime) : "—"}`,
     userLine(meta.user, meta.signatureVerified),
     "",
     `🧹 <b>Тип уборки:</b> ${escapeHtml(labelForType(calc.type))}`,
@@ -117,7 +119,7 @@ export async function sendLeadToTelegram(
         chat_id: chatId,
         text: message,
         parse_mode: "HTML",
-        disable_web_page_preview: true,
+        link_preview_options: { is_disabled: true },
         reply_markup: statusKeyboard(),
       }),
     });

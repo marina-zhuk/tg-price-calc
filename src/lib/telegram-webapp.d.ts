@@ -3,6 +3,13 @@
  * нужные этому приложению. Полная спецификация: https://core.telegram.org/bots/webapps
  */
 
+export interface TelegramWebAppUser {
+  id: number;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+}
+
 export interface TelegramThemeParams {
   bg_color?: string;
   text_color?: string;
@@ -38,6 +45,7 @@ export interface TelegramBackButton {
 
 export interface TelegramWebApp {
   initData: string;
+  initDataUnsafe: { user?: TelegramWebAppUser };
   /** "unknown" вне Telegram; реальная платформа (android/ios/tdesktop/...) внутри. */
   platform?: string;
   colorScheme: "light" | "dark";

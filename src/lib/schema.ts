@@ -42,6 +42,8 @@ export const leadSchema = z.object({
     .regex(/^[\d\s()+\-]+$/, "Телефон может содержать только цифры и символы + ( ) -")
     .refine((v) => countDigits(v) >= 10, "Введите корректный телефон (минимум 10 цифр)"),
   comment: z.string().trim().max(1000).optional().or(z.literal("")),
+  address: z.string().trim().min(5, "Укажите адрес (минимум 5 символов)").max(300),
+  datetime: z.string().trim().max(100).optional().or(z.literal("")),
   calc: calcSchema,
   // Номер попытки отправки в рамках сессии (для пометки «повторная заявка»).
   submissionCount: z.number().int().positive().optional(),

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CalcInput, CalcResult } from "@/lib/pricing";
 import type { TelegramWebApp } from "@/lib/telegram-webapp";
 import { pricingConfig } from "@/config/pricing.config";
+import { countDigits } from "@/lib/schema";
 
 interface LeadFormProps {
   input: CalcInput;
@@ -15,10 +16,6 @@ interface LeadFormProps {
 }
 
 type Status = "idle" | "submitting" | "success" | "error";
-
-function countDigits(s: string): number {
-  return (s.match(/\d/g) ?? []).length;
-}
 
 /** Живая маска российского номера: +7 (XXX) XXX-XX-XX. */
 function formatRuPhone(value: string): string {
@@ -49,24 +46,47 @@ export default function LeadForm({
 }: LeadFormProps) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [datetime, setDatetime] = useState("");
   const [comment, setComment] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState<string>("");
+  const [submitted, setSubmitted] = useState(false);
   const submissionCount = useRef(0);
 
-  const isValid = name.trim().length >= 2 && countDigits(phone) >= 11;
+  // Pre-fill имени из Telegram-аккаунта пользователя.
+  useEffect(() => {
+    const user = webApp?.initDataUnsafe?.user;
+    if (!user) return;
+    const tgName = [user.first_name, user.last_name].filter(Boolean).join(" ");
+    if (tgName) setName((prev) => (prev === "" ? tgName : prev));
+  }, [webApp]);
+
+  const nameValid = name.trim().length >= 2;
+  const phoneValid = countDigits(phone) >= 11;
+  const addressValid = address.trim().length >= 5;
+  const isValid = nameValid && phoneValid && addressValid;
 
   const buttonLabel = `Оставить заявку · ≈${result.min.toLocaleString(
     "ru-RU"
   )}–${result.max.toLocaleString("ru-RU")} ₽`;
 
+  const clearError = () => {
+    if (status === "error") {
+      setStatus("idle");
+      setErrorMsg("");
+    }
+  };
+
   // Свежие значения для колбэка MainButton (регистрируется один раз).
-  const latest = useRef({ name, phone, comment, status, isValid });
-  latest.current = { name, phone, comment, status, isValid };
+  const latest = useRef({ name, phone, address, datetime, comment, status, isValid });
+  latest.current = { name, phone, address, datetime, comment, status, isValid };
 
   const submit = useCallback(async () => {
     const cur = latest.current;
     if (cur.status === "submitting") return;
+
+    setSubmitted(true);
 
     if (cur.name.trim().length < 2) {
       setStatus("error");
@@ -76,6 +96,11 @@ export default function LeadForm({
     if (countDigits(cur.phone) < 11) {
       setStatus("error");
       setErrorMsg("Введите корректный телефон: +7 (___) ___-__-__");
+      return;
+    }
+    if (cur.address.trim().length < 5) {
+      setStatus("error");
+      setErrorMsg("Укажите адрес уборки (минимум 5 символов).");
       return;
     }
 
@@ -91,6 +116,8 @@ export default function LeadForm({
         body: JSON.stringify({
           name: cur.name.trim(),
           phone: cur.phone.trim(),
+          address: cur.address.trim(),
+          datetime: cur.datetime.trim() || undefined,
           comment: cur.comment.trim() || undefined,
           calc: {
             type: input.type,
@@ -132,9 +159,12 @@ export default function LeadForm({
   const handleNewRequest = useCallback(() => {
     setName("");
     setPhone("");
+    setAddress("");
+    setDatetime("");
     setComment("");
     setStatus("idle");
     setErrorMsg("");
+    setSubmitted(false);
     onNewRequest();
   }, [onNewRequest]);
 
@@ -203,6 +233,13 @@ export default function LeadForm({
     );
   }
 
+  const fieldClass = (valid: boolean) =>
+    `w-full rounded-xl border ${
+      submitted && !valid
+        ? "border-red-400 focus:ring-red-400"
+        : "border-black/10 focus:ring-tg-button"
+    } bg-tg-bg px-4 py-3 outline-none focus:ring-2`;
+
   return (
     <form
       className="space-y-4"
@@ -219,10 +256,10 @@ export default function LeadForm({
           id="name"
           type="text"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => { setName(e.target.value); clearError(); }}
           placeholder="Как к вам обращаться"
           autoComplete="name"
-          className="w-full rounded-xl border border-black/10 bg-tg-bg px-4 py-3 outline-none focus:ring-2 focus:ring-tg-button"
+          className={fieldClass(nameValid)}
         />
       </div>
 
@@ -235,9 +272,39 @@ export default function LeadForm({
           type="tel"
           inputMode="tel"
           value={phone}
-          onChange={(e) => setPhone(formatRuPhone(e.target.value))}
+          onChange={(e) => { setPhone(formatRuPhone(e.target.value)); clearError(); }}
           placeholder="+7 (___) ___-__-__"
           autoComplete="tel"
+          className={fieldClass(phoneValid)}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="address" className="mb-1 block text-sm font-semibold">
+          Адрес уборки
+        </label>
+        <input
+          id="address"
+          type="text"
+          value={address}
+          onChange={(e) => { setAddress(e.target.value); clearError(); }}
+          placeholder="Город, улица, дом, квартира"
+          autoComplete="street-address"
+          className={fieldClass(addressValid)}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="datetime" className="mb-1 block text-sm font-semibold">
+          Желаемая дата и время{" "}
+          <span className="font-normal text-tg-hint">(необязательно)</span>
+        </label>
+        <input
+          id="datetime"
+          type="text"
+          value={datetime}
+          onChange={(e) => { setDatetime(e.target.value); clearError(); }}
+          placeholder="например: 5 июня, с 10:00"
           className="w-full rounded-xl border border-black/10 bg-tg-bg px-4 py-3 outline-none focus:ring-2 focus:ring-tg-button"
         />
       </div>
@@ -250,8 +317,8 @@ export default function LeadForm({
         <textarea
           id="comment"
           value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          placeholder="Адрес, удобное время, детали"
+          onChange={(e) => { setComment(e.target.value); clearError(); }}
+          placeholder="Детали, особые пожелания"
           rows={3}
           className="w-full resize-none rounded-xl border border-black/10 bg-tg-bg px-4 py-3 outline-none focus:ring-2 focus:ring-tg-button"
         />
@@ -281,7 +348,7 @@ export default function LeadForm({
         <p className="text-center text-xs text-tg-hint">
           {isValid
             ? "Нажмите кнопку внизу экрана, чтобы отправить заявку."
-            : "Заполните имя и телефон — кнопка отправки появится внизу."}
+            : "Заполните имя, телефон и адрес — кнопка отправки появится внизу."}
         </p>
       )}
     </form>
